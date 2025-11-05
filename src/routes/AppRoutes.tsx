@@ -1,17 +1,21 @@
 import { useRoutes } from "react-router-dom";
 
-import { RobotsApp } from "../RobotsApp";
-import { RobotComponent } from "../pages/robotComponents";
+// 1. Importar los componentes renombrados
+import { FeriaApp } from "../FeriaApp"; 
+// 2. Corregir la importación del componente de detalle
+import { ProductoComponent } from "../pages/productoComponents";
 
 export const AppRoutes = () => {
     const routes = useRoutes([
         {
+            // 3. Ruta principal: Renderiza la app principal de la feria
             path: '/',
-            element: <RobotsApp />
+            element: <FeriaApp />
         },
         {
-            path: '/robot-component/:id',
-            element: <RobotComponent />
+            // 4. Ruta de detalle: Actualizar el path y el elemento
+            path: '/producto-component/:id',
+            element: <ProductoComponent />
         },
         {
             path: '*',

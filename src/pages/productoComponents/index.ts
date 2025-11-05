@@ -1,0 +1,3 @@
+
+
+export { ProductoComponent } from './ProductoComponent'

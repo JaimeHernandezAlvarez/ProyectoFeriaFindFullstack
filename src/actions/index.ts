@@ -1,2 +1,2 @@
-export { getRobotsByName } from './get-robots-by-name.actions'
-export { getRobots } from './get-robots.actions'
+export { getProductoByName } from './get-productos-by-name.actions'
+export { getProductos } from './get-productos.actions'
