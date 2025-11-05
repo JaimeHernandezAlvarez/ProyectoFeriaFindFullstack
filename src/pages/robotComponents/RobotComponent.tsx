@@ -11,7 +11,7 @@ export const RobotComponent = () => {
   const [loading, setLoading] = useState(true);
 
   const goBack = () => {    
-    navigate(-1);
+    navigate("/");
   }
 
   useEffect(() => {
