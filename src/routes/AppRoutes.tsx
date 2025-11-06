@@ -1,9 +1,8 @@
 import { useRoutes } from "react-router-dom";
-
-// 1. Importar los componentes renombrados
 import { FeriaApp } from "../FeriaApp"; 
-// 2. Corregir la importación del componente de detalle
 import { ProductoComponent } from "../pages/productoComponents";
+import { RegisterPage } from "../pages/AuthComponents/RegisterPage";
+import { LoginPage } from "../pages/AuthComponents/LoginPage";
 
 export const AppRoutes = () => {
     const routes = useRoutes([
@@ -16,6 +15,14 @@ export const AppRoutes = () => {
             // 4. Ruta de detalle: Actualizar el path y el elemento
             path: '/producto-component/:id',
             element: <ProductoComponent />
+        },
+        {
+            path: '/registro',
+            element: <RegisterPage/>
+        },
+        {
+            path: '/login',
+            element: <LoginPage />
         },
         {
             path: '*',
