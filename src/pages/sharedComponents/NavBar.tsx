@@ -12,28 +12,25 @@ export const NavBar = ({ onQuery }:Props) => {
   useEffect(()=> {
     const timeOutId = setTimeout(()=> {
       onQuery(query);
-      },2000)
+    },2000);
 
-      return () => {
-        clearTimeout(timeOutId);
-      }
-  },[query,onQuery])
+    return () => {
+      clearTimeout(timeOutId);
+    };
+  },[query,onQuery]);
 
   const handleSearch = () => {
-    onQuery(query)
-  }
+    onQuery(query);
+  };
 
   const handleKeyDown = (event:KeyboardEvent<HTMLInputElement>) => {
     if(event.key === "Enter"){
       event.preventDefault();
       handleSearch();
     }
-  }
+  };
 
   return (
-    // 1. CAMBIO DE COLOR:
-    // Se eliminó la prop 'bg="success"'
-    // Se añadió la prop 'style' con tu color específico.
     <Navbar 
       expand="lg" 
       style={{ backgroundColor: '#2E753D' }} 
@@ -60,7 +57,7 @@ export const NavBar = ({ onQuery }:Props) => {
               title={
                 <span className="text-white">
                   <i className="fa-solid fa-store me-1"></i>
-                  Categorías
+                  Categorias
                 </span>
               } 
               id="basic-nav-dropdown"
@@ -73,8 +70,8 @@ export const NavBar = ({ onQuery }:Props) => {
                 Verduras
               </NavDropdown.Item>
               <NavDropdown.Divider className="bg-secondary" />
-              <NavDropdown.Item href="/categorias/abarrotes" className="text-white">
-                Abarrotes
+              <NavDropdown.Item href="/categorias/otros" className="text-white">
+                Otros
               </NavDropdown.Item>
             </NavDropdown>
           </Nav>
@@ -87,7 +84,7 @@ export const NavBar = ({ onQuery }:Props) => {
               aria-label="Search"
               value={query}
               onChange={(event) => {
-                setQuery(event.target.value)
+                setQuery(event.target.value);
               }}
               onKeyDown={handleKeyDown}
             />
@@ -95,7 +92,7 @@ export const NavBar = ({ onQuery }:Props) => {
               variant="outline-light"
               className="me-2 text-nowrap"
             >
-              Iniciar Sesión
+              Iniciar Sesion
             </Button>
             <Button 
               variant="warning"
@@ -108,4 +105,4 @@ export const NavBar = ({ onQuery }:Props) => {
       </Container>
     </Navbar>
   );
-}
+};
