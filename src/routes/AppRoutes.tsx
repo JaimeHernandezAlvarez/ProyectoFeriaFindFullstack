@@ -3,6 +3,7 @@ import { FeriaApp } from "../FeriaApp";
 import { ProductoComponent } from "../pages/productoComponents";
 import { RegisterPage } from "../pages/AuthComponents/RegisterPage";
 import { LoginPage } from "../pages/AuthComponents/LoginPage";
+import { ProfilePage } from "../pages/profile/ProfilePage";
 
 export const AppRoutes = () => {
     const routes = useRoutes([
@@ -23,6 +24,10 @@ export const AppRoutes = () => {
         {
             path: '/login',
             element: <LoginPage />
+        },
+        {
+            path: '/perfil',
+            element: <ProfilePage />
         },
         {
             path: '*',
