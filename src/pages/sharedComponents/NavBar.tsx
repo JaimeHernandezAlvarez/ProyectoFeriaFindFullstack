@@ -1,18 +1,18 @@
 import { useEffect, useState , type KeyboardEvent } from 'react';
 import { Navbar, Nav, NavDropdown, Container, Form, Button } from 'react-bootstrap';
-// 1. IMPORTAR LINK DE REACT ROUTER
 import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext'; // 👈 NUEVO
 
 interface Props {
   onQuery: (query:string) => void; 
 }
 
 export const NavBar = ({ onQuery }:Props) => {
-  // 2. INICIALIZAR EL HOOK 'useNavigate'
   const navigate = useNavigate();
+  const { totalItems } = useCart(); // 👈 NUEVO
   const [ query , setQuery ] = useState('');
 
-  // --- Lógica de búsqueda (no necesita cambios) ---
+  // --- Lógica de búsqueda ---
   useEffect(()=> {
     const timeOutId = setTimeout(()=> {
       onQuery(query);
@@ -34,12 +34,12 @@ export const NavBar = ({ onQuery }:Props) => {
     }
   };
   // --- Fin de la lógica de búsqueda ---
+
   const isLoggedIn = !!localStorage.getItem("usuarioLogeado");
 
-  // Nueva función para manejar el cierre de sesión
   const handleLogout = () => {
-    localStorage.removeItem("usuarioLogeado"); // Borramos al usuario
-    navigate("/"); // Llevamos al inicio (esto forzará un re-render)
+    localStorage.removeItem("usuarioLogeado");
+    navigate("/");
   };
 
   return (
@@ -54,6 +54,7 @@ export const NavBar = ({ onQuery }:Props) => {
           <i className="fa-solid fa-seedling me-2"></i>
           FeriaFind
         </Navbar.Brand>
+
         <Navbar.Toggle aria-controls="navbarSupportedContent" />
         <Navbar.Collapse id="navbarSupportedContent">
           <Nav className="me-auto">
@@ -100,29 +101,44 @@ export const NavBar = ({ onQuery }:Props) => {
               }}
               onKeyDown={handleKeyDown}
             />
+
+            {/* 🛒 Botón Carrito */}
+            <Button
+              variant="outline-light"
+              className="me-2 position-relative text-nowrap"
+              onClick={() => navigate('/carrito')}
+            >
+              <i className="fa-solid fa-cart-shopping"></i>
+              {totalItems > 0 && (
+                <span
+                  className="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle"
+                  style={{ fontSize: '0.7rem' }}
+                >
+                  {totalItems}
+                </span>
+              )}
+            </Button>
             
             { isLoggedIn ? (
-              // Si el usuario ESTÁ logeado
               <>
                 <Button 
                   onClick={() => navigate('/perfil')}
                   variant="outline-light"
                   className="me-2 text-nowrap"
                 >
-                  <i className="fa-solid fa-user me-1"></i> {/* Icono de usuario */}
+                  <i className="fa-solid fa-user me-1"></i>
                   Mi Perfil
                 </Button>
                 <Button 
                   variant="warning"
                   className="text-nowrap"
-                  onClick={handleLogout} // Llama a la función de logout
+                  onClick={handleLogout}
                 >
-                  <i className="fa-solid fa-arrow-right-from-bracket me-1"></i> {/* Icono de salida */}
+                  <i className="fa-solid fa-arrow-right-from-bracket me-1"></i>
                   Cerrar Sesión
                 </Button>
               </>
             ) : (
-              // Si el usuario NO ESTÁ logeado
               <>
                 <Button 
                   variant="outline-light"

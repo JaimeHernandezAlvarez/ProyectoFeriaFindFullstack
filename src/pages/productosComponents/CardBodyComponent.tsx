@@ -3,6 +3,7 @@ import { CardTitleComponent } from "./CardTitleComponent";
 import { CardTextComponent } from "./CardTextComponent";
 import { capitalizeFirst } from '../../helpers';
 import type { ProductoProps } from "../../interfaces/productos.interfaces";
+import { useCart } from '../../context/CartContext'; // 👈 NUEVO
 
 interface Props {
   producto: ProductoProps;
@@ -11,8 +12,9 @@ interface Props {
 export const CardBodyComponent = ({ producto }: Props) => {
 
   const navigate = useNavigate();
+  const { addToCart } = useCart(); // 👈 NUEVO
 
-  const handleShowProducto = ( producto: ProductoProps ) => {
+  const handleShowProducto = (producto: ProductoProps) => {
     navigate(`/producto-component/${producto.id}`);
   }
 
@@ -29,21 +31,28 @@ export const CardBodyComponent = ({ producto }: Props) => {
       
       <CardTextComponent text={textoPrecio} />
 
-      {/* --- CAMBIO AQUÍ --- */}
-      <a          
-        // 1. Quitamos 'btn-primary' y añadimos 'text-white'
-        className="btn text-center text-white"
-        // 2. Añadimos el estilo en línea con tu color
-        style={{ 
-          backgroundColor: '#2E753D', 
-          borderColor: '#2E753D' 
-        }}
-        onClick={ () => {
-          handleShowProducto(producto)
-        }}
-      >
-        <i className="fa-solid fa-eye"></i> Ver mas...
-      </a>
+      <div className="d-flex justify-content-between mt-2 gap-2">
+        {/* Botón ver más (igual que antes, pero como button) */}
+        <button
+          className="btn text-center text-white flex-fill"
+          style={{ 
+            backgroundColor: '#2E753D', 
+            borderColor: '#2E753D' 
+          }}
+          onClick={() => handleShowProducto(producto)}
+        >
+          <i className="fa-solid fa-eye"></i> Ver mas...
+        </button>
+
+        {/* NUEVO: botón agregar al carrito */}
+        <button
+          className="btn btn-outline-success flex-fill"
+          onClick={() => addToCart(producto)}
+        >
+          <i className="fa-solid fa-cart-plus me-1"></i>
+          Agregar
+        </button>
+      </div>
     </div>
   )
 }

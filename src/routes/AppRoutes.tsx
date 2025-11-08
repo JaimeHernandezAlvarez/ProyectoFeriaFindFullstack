@@ -4,36 +4,39 @@ import { ProductoComponent } from "../pages/productoComponents";
 import { RegisterPage } from "../pages/AuthComponents/RegisterPage";
 import { LoginPage } from "../pages/AuthComponents/LoginPage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
+import { CartPage } from "../pages/cart/CartPage"; // 👈 NUEVO IMPORT
 
 export const AppRoutes = () => {
-    const routes = useRoutes([
-        {
-            // 3. Ruta principal: Renderiza la app principal de la feria
-            path: '/',
-            element: <FeriaApp />
-        },
-        {
-            // 4. Ruta de detalle: Actualizar el path y el elemento
-            path: '/producto-component/:id',
-            element: <ProductoComponent />
-        },
-        {
-            path: '/registro',
-            element: <RegisterPage/>
-        },
-        {
-            path: '/login',
-            element: <LoginPage />
-        },
-        {
-            path: '/perfil',
-            element: <ProfilePage />
-        },
-        {
-            path: '*',
-            element: <div>Pagina no encontrada - 404</div>
-        }
-    ]);
+  const routes = useRoutes([
+    {
+      path: '/',
+      element: <FeriaApp />
+    },
+    {
+      path: '/producto-component/:id',
+      element: <ProductoComponent />
+    },
+    {
+      path: '/registro',
+      element: <RegisterPage/>
+    },
+    {
+      path: '/login',
+      element: <LoginPage />
+    },
+    {
+      path: '/perfil',
+      element: <ProfilePage />
+    },
+    {
+      path: '/carrito',          // 👈 NUEVA RUTA DEL CARRITO
+      element: <CartPage />
+    },
+    {
+      path: '*',
+      element: <div>Pagina no encontrada - 404</div>
+    }
+  ]);
 
-    return routes;
-}
+  return routes;
+};
