@@ -1,20 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { ProductoProps } from '../interfaces/productos.interfaces';
-
-export interface CartItem {
-  producto: ProductoProps;
-  quantity: number;
-}
-
-interface CartContextValue {
-  items: CartItem[];
-  addToCart: (producto: ProductoProps, quantity?: number) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
-  clearCart: () => void;
-  totalItems: number;
-  totalPrice: number;
-}
+import type { CartItem, CartContextValue } from '../interfaces/cart.interfaces';
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
@@ -38,7 +23,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('carrito', JSON.stringify(items));
   }, [items]);
 
-  const addToCart = (producto: ProductoProps, quantity: number = 1) => {
+  const addToCart: CartContextValue['addToCart'] = (producto, quantity = 1) => {
     setItems(prev => {
       const existing = prev.find(item => item.producto.id === producto.id);
       if (existing) {
@@ -52,11 +37,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart: CartContextValue['removeFromCart'] = (id) => {
     setItems(prev => prev.filter(item => item.producto.id !== id));
   };
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity: CartContextValue['updateQuantity'] = (id, quantity) => {
     if (quantity <= 0) {
       removeFromCart(id);
       return;
@@ -68,7 +53,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const clearCart = () => setItems([]);
+  const clearCart: CartContextValue['clearCart'] = () => setItems([]);
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce(
