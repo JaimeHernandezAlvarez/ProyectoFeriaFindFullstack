@@ -21,7 +21,10 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Vitest & Vite */
+    "types": ["vite/client", "vitest/globals"]
   },
   "include": ["src"]
 }
