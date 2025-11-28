@@ -1,28 +1,30 @@
 import type { RespuestaProductoUnico } from '../interfaces/productos.interfaces';
-import { mockProductos } from '../data/mock-productos';
+import { getProductos } from './get-productos.actions';
 
-// Renombramos la función
-// Asumimos que la búsqueda por nombre devuelve un solo producto (búsqueda exacta)
 export const getProductoByName = async(query: string): Promise<RespuestaProductoUnico> => {
   
-  await new Promise(resolve => setTimeout(resolve, 50)); // Simula lag
+  try {
+    // 1. Traemos TODOS los productos reales (reutilizando la función que ya hicimos)
+    const { productos } = await getProductos();
 
-  // Normalizamos la búsqueda (ignoramos mayúsculas/minúsculas)
-  const queryLower = query.toLowerCase();
-  const productoEncontrado = mockProductos.find( 
-    p => p.nombre.toLowerCase() === queryLower 
-  );
+    // 2. Filtramos en memoria (Client-side filtering)
+    const queryLower = query.toLowerCase();
+    const productoEncontrado = productos.find( 
+      p => p.nombre.toLowerCase().includes(queryLower) 
+    );
 
-  // Simulamos el error si no se encuentra
-  if (!productoEncontrado) {
-    throw new Error(`Error: Producto con nombre "${query}" no encontrado.`);
+    if (!productoEncontrado) {
+      throw new Error(`Producto "${query}" no encontrado.`);
+    }
+
+    return {
+      ok: true,
+      statusCode: 200,
+      producto: productoEncontrado
+    };
+
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
-
-  const data: RespuestaProductoUnico = {
-    ok: true,
-    statusCode: 200,
-    producto: productoEncontrado
-  };
-
-  return data;
 }

@@ -1,19 +1,43 @@
+import { mapProductoApiToApp } from '../helpers/producto-mapper';
 import type { RespuestaTodosProductos } from '../interfaces/productos.interfaces';
-import { mockProductos } from '../data/mock-productos';
 
-// Renombramos la función
+const BASE_URL = 'https://microprod.onrender.com/api/v1'; 
+
 export const getProductos = async(): Promise<RespuestaTodosProductos> => {
-  
-  // Simulamos una llamada asíncrona (como si fuera un fetch)
-  // Esto es para que el componente que llame a getProductos pueda usar await
-  await new Promise(resolve => setTimeout(resolve, 50)); // Simula 50ms de lag
+  try {
+    const response = await fetch(`${BASE_URL}/productos`);
+    
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
-  // Creamos la respuesta simulada con la estructura de la API
-  const data: RespuestaTodosProductos = {
-    ok: true,
-    statusCode: 200,
-    productos: mockProductos // Usamos nuestros datos locales
-  };
+    const dataApi = await response.json();
 
-  return data;
+    // --- CORRECCIÓN CLAVE AQUÍ ---
+    let listaProductosRaw = [];
+
+    // 1. Verificamos si existe _embedded.productoList (Así viene de tu API según la foto)
+    if (dataApi._embedded && dataApi._embedded.productoList) {
+        listaProductosRaw = dataApi._embedded.productoList;
+    } 
+    // 2. Por si acaso en el futuro cambia a un array directo
+    else if (Array.isArray(dataApi)) {
+        listaProductosRaw = dataApi;
+    }
+
+    // 3. Mapeamos
+    const productosMapeados = listaProductosRaw.map(mapProductoApiToApp);
+
+    return {
+      ok: true,
+      statusCode: response.status,
+      productos: productosMapeados
+    };
+
+  } catch (error) {
+    console.error("❌ Error en getProductos:", error);
+    return {
+      ok: false,
+      statusCode: 500,
+      productos: []
+    };
+  }
 }

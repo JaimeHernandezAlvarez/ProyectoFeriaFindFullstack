@@ -6,6 +6,7 @@ import { LoginPage } from "../pages/AuthComponents/LoginPage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
 import { CartPage } from "../pages/cart/CartPage";
 import { CategoriaPage } from "../pages/productoComponents/CategoriaPage";
+import { VendedoresPage } from "../pages/vendedoresComponents/VendedoresComponent";
 
 export const AppRoutes = () => {
   const routes = useRoutes([
@@ -36,6 +37,10 @@ export const AppRoutes = () => {
     {
       path: "/categorias/:nombreCategoria",
       element: <CategoriaPage />,
+    },
+    {
+      path: "/vendedores",
+      element: <VendedoresPage/>
     },
     {
       path: "*",

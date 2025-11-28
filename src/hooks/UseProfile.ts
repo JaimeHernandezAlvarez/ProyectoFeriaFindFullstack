@@ -1,11 +1,12 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { UserProfile, ProfileFormData, ProfileErrors } from '../interfaces';
+import type { ProfileFormData, ProfileErrors } from '../interfaces/auth.interfaces'; // Asegúrate que la ruta sea correcta
+import { getUserByEmailAction, updateUserAction } from '../actions/auth.actions';
 
 export const useProfile = () => {
   const navigate = useNavigate();
   
-  // Estado para los datos del formulario
+  // Estado para el formulario
   const [formData, setFormData] = useState<ProfileFormData>({
     nombre: '',
     email: '',
@@ -16,78 +17,85 @@ export const useProfile = () => {
     confirmPassword: '',
   });
   
-  // Estado para errores y mensajes de éxito
+  // Estado para errores y mensajes
   const [errors, setErrors] = useState<ProfileErrors>({});
-  // Estado para el email original (nuestro ID)
-  const [loggedInEmail, setLoggedInEmail] = useState<string | null>(null);
-  // Estado de carga
+  
+  // Estados para manejar la lógica de API
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
 
-  // 1. CARGAR DATOS DEL USUARIO AL INICIAR
+  // 1. CARGAR DATOS DEL USUARIO (API)
   useEffect(() => {
-    const email = localStorage.getItem("usuarioLogeado");
-    if (!email) {
-      navigate("/login"); // Si no hay nadie, fuera
-      return;
-    }
+    const cargarPerfil = async () => {
+      // Obtenemos el email guardado en el login
+      const emailStorage = localStorage.getItem("usuarioLogeado");
+      
+      if (!emailStorage) {
+        navigate("/login");
+        return;
+      }
 
-    setLoggedInEmail(email); // Guardamos el email (nuestro ID)
-    const allUsers: UserProfile[] = JSON.parse(localStorage.getItem("usuarios") || "[]");
-    const currentUser = allUsers.find(u => u.email === email);
+      // Llamamos a la API
+      const respuesta = await getUserByEmailAction(emailStorage);
 
-    if (currentUser) {
-      // Llenamos el formulario con los datos guardados
-      setFormData({
-        nombre: currentUser.nombre,
-        email: currentUser.email,
-        descripcion: currentUser.descripcion || '', // Usamos '' si es undefined
-        horario: currentUser.horario || '',
-        foto: currentUser.foto || '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } else {
-      // El usuario logeado no existe en la BD (raro, pero posible)
-      localStorage.removeItem("usuarioLogeado");
-      navigate("/login");
-    }
-    
-    setIsLoading(false);
+      if (respuesta.ok && respuesta.usuario) {
+        const u = respuesta.usuario;
+        
+        // Guardamos el ID para poder actualizar después
+        setUserId(u.idUsuario || 0);
+        // Guardamos la contraseña actual (hash) por si no la quieren cambiar
+
+        // Rellenamos el formulario mapeando los nombres del backend a nuestro frontend
+        setFormData({
+            nombre: u.nombreUsuario || '',    // Backend: nombreUsuario -> Frontend: nombre
+            email: u.correoElectronico || '', // Backend: correoElectronico -> Frontend: email
+            descripcion: u.descripcion || '',
+            horario: u.horario || '',
+            foto: u.foto || '',
+            newPassword: '',
+            confirmPassword: ''
+        });
+      } else {
+        // Si falla (ej: borraron el usuario de la DB), cerramos sesión
+        console.error("Usuario no encontrado en la nube");
+        localStorage.removeItem("usuarioLogeado");
+        navigate("/login");
+      }
+      
+      setIsLoading(false);
+    };
+
+    cargarPerfil();
   }, [navigate]);
 
-  // 2. MANEJADOR DE CAMBIOS GENÉRICO
+  // 2. MANEJADOR DE CAMBIOS
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Limpiar errores al escribir
-    if (errors[name as keyof ProfileErrors]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
-    }
-    if (errors.general) {
-      setErrors(prev => ({ ...prev, general: undefined }));
-    }
+    // Limpiar errores
+    if (errors[name as keyof ProfileErrors]) setErrors(prev => ({ ...prev, [name]: undefined }));
+    if (errors.general) setErrors(prev => ({ ...prev, general: undefined }));
   };
 
-  // 3. MANEJADOR DE GUARDADO
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  // 3. MANEJADOR DE GUARDADO (UPDATE)
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!loggedInEmail) return; // No debería pasar
+    if (!userId) return; 
 
+    // --- VALIDACIONES LOCALES ---
     const newErrors: ProfileErrors = {};
     let valid = true;
 
-    // --- Validación ---
     if (!formData.nombre.trim()) {
-      newErrors.nombre = "El nombre no puede estar vacío.";
+      newErrors.nombre = "El nombre es obligatorio.";
       valid = false;
     }
     
-    // Validar contraseña (solo si se está intentando cambiar)
+    // Si escribió algo en nueva contraseña, validamos
     if (formData.newPassword) {
       if (formData.newPassword.length < 6) {
-        newErrors.newPassword = "La contraseña debe tener al menos 6 caracteres.";
+        newErrors.newPassword = "Mínimo 6 caracteres.";
         valid = false;
       }
       if (formData.newPassword !== formData.confirmPassword) {
@@ -95,10 +103,9 @@ export const useProfile = () => {
         valid = false;
       }
     }
-    
-    // Validar URL de foto (básico)
+
     if (formData.foto && !formData.foto.startsWith('http')) {
-        newErrors.foto = "Por favor, ingrese una URL válida (http...).";
+        newErrors.foto = "La URL de la imagen debe ser válida (http...).";
         valid = false;
     }
 
@@ -107,40 +114,22 @@ export const useProfile = () => {
       return;
     }
 
-    // --- Lógica de Guardado ---
-    const allUsers: UserProfile[] = JSON.parse(localStorage.getItem("usuarios") || "[]");
-    const userIndex = allUsers.findIndex(u => u.email === loggedInEmail);
+    setIsLoading(true);
 
-    if (userIndex === -1) {
-      setErrors({ general: "Error: No se pudo encontrar al usuario. Intente más tarde." });
-      return;
+    // --- LLAMADA A LA API ---
+    const resultado = await updateUserAction(userId, formData);
+
+    if (resultado.ok) {
+        setErrors({ general: "¡Perfil actualizado correctamente en la nube!" });
+        // Opcional: Limpiar campos de contraseña
+        setFormData(prev => ({...prev, newPassword: '', confirmPassword: ''}));
+    } else {
+        setErrors({ general: resultado.message || "Error al actualizar." });
     }
 
-    // Actualizar el usuario
-    const oldUser = allUsers[userIndex];
-    
-    // Creamos el usuario actualizado
-    const updatedUser: UserProfile = {
-      ...oldUser, // Mantenemos email y password original
-      nombre: formData.nombre.trim(),
-      descripcion: formData.descripcion.trim(),
-      horario: formData.horario.trim(),
-      foto: formData.foto.trim(),
-      // Si se cambió la contraseña, la actualizamos
-      password: formData.newPassword ? formData.newPassword : oldUser.password,
-    };
-
-    // Reemplazamos al usuario en el array
-    allUsers[userIndex] = updatedUser;
-    
-    // Guardamos el array actualizado en localStorage
-    localStorage.setItem("usuarios", JSON.stringify(allUsers));
-
-    // Mostramos mensaje de éxito
-    setErrors({ general: "¡Perfil actualizado con éxito!" });
+    setIsLoading(false);
   };
 
-  // Retornamos todo lo que el componente necesita
   return {
     formData,
     errors,

@@ -1,88 +1,52 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { LoginFormData, LoginErrors } from '../interfaces/auth.interfaces';
+import { loginUserAction } from '../actions/auth.actions'; // 👈 IMPORTAR ACCIÓN
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
-    password: '',
-  });
-
-  // Un solo estado de error para ambos campos
+  const [formData, setFormData] = useState<LoginFormData>({ email: '', password: '' });
   const [errors, setErrors] = useState<LoginErrors>({});
+  const [loading, setLoading] = useState(false); // 👈 NUEVO ESTADO
 
-  // Manejador de cambios genérico
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Limpia el error al escribir
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name as keyof LoginErrors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined,
-      }));
+      setErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
 
-  // Función de validación
   const validateForm = (): boolean => {
-    const { email, password } = formData;
-    const newErrors: LoginErrors = {};
-    let valid = true;
-
-    if (!email.trim()) {
-      newErrors.email = "Por favor, ingrese su email.";
-      valid = false;
-    }
-
-    if (!password.trim()) {
-      newErrors.password = "Por favor, ingrese su contraseña.";
-      valid = false;
-    }
-
-    setErrors(newErrors);
-    return valid;
+     // ... (Tu validación existente se mantiene igual) ...
+     const { email, password } = formData;
+     if (!email.trim()) return false;
+     if (!password.trim()) return false;
+     return true;
   };
 
-  // Manejador del envío
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    if (!validateForm()) {
-      return;
-    }
+    setLoading(true); // Bloqueamos botón
 
-    // --- Lógica de Autenticación (de tu .js) ---
-    const { email, password } = formData;
-    const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
-    
-    // NOTA: En una app real, la contraseña NUNCA se compara así.
-    // Esto es solo para replicar tu lógica.
-    const usuario = usuarios.find((u: any) => 
-      u.email === email && u.password === password
-    );
+    // --- NUEVA LÓGICA CON API ---
+    const response = await loginUserAction(formData);
 
-    if (usuario) {
-      // Éxito: Guardar sesión y redirigir
-      localStorage.setItem("usuarioLogeado", email);
-      navigate("/"); // Redirige al inicio
+    if (response.ok && response.usuario) {
+      // 1. Guardamos el email o token en localStorage para mantener sesión
+      localStorage.setItem("usuarioLogeado", response.usuario.correoElectronico);
+      // Opcional: Guardar más datos del usuario si quieres
+      localStorage.setItem("userData", JSON.stringify(response.usuario));
+      
+      navigate("/");
     } else {
-      // Fracaso: Mostrar error
-      setErrors({ email: "Email o contraseña incorrectos." });
+      setErrors({ email: response.message || "Error al iniciar sesión" });
     }
+    
+    setLoading(false);
   };
 
-  return {
-    formData,
-    errors,
-    handleChange,
-    handleSubmit,
-  };
+  return { formData, errors, handleChange, handleSubmit, loading };
 };

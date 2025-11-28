@@ -1,11 +1,13 @@
 import { Container, Row, Col, Form, Button, Spinner, Alert } from 'react-bootstrap';
 import { NavBar } from '../sharedComponents/NavBar'; // Asumimos esta ruta
 import { useProfile } from '../../hooks/UseProfile';
+import { useState } from 'react';
 
 export const ProfilePage = () => {
     const defaultProfilePic = "https://i.pinimg.com/170x/5a/bd/98/5abd985735a8fd4adcb0e795de6a1005.jpg";
   // Traemos toda la lógica desde nuestro hook
   const { formData, errors, isLoading, handleChange, handleSubmit } = useProfile();
+  const [showPassword, setShowPassword] = useState(false);
 
   // Función placeholder para el NavBar (la página de perfil no tiene búsqueda)
   const handleDummySearch = () => {};
@@ -121,38 +123,63 @@ export const ProfilePage = () => {
                   />
                 </Form.Group>
 
-                {/* --- Cambiar Contraseña --- */}
-                <h4 className="mt-5 mb-3 fs-5">Cambiar Contraseña</h4>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3" controlId="formNewPassword">
-                      <Form.Label>Nueva Contraseña</Form.Label>
-                      <Form.Control
-                        type="password"
-                        placeholder="(Dejar en blanco para no cambiar)"
-                        name="newPassword"
-                        value={formData.newPassword}
-                        onChange={handleChange}
-                        isInvalid={!!errors.newPassword}
-                      />
-                      <Form.Control.Feedback type="invalid">{errors.newPassword}</Form.Control.Feedback>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3" controlId="formConfirmPassword">
-                      <Form.Label>Confirmar Contraseña</Form.Label>
-                      <Form.Control
-                        type="password"
-                        placeholder="..."
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        isInvalid={!!errors.confirmPassword}
-                      />
-                      <Form.Control.Feedback type="invalid">{errors.confirmPassword}</Form.Control.Feedback>
-                    </Form.Group>
-                  </Col>
-                </Row>
+                <div className="border-top pt-4 mt-4">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h4 className="mb-0 fs-5">Seguridad</h4>
+                  
+                  {/* 2. BOTÓN INTERRUPTOR */}
+                  <Button 
+                    variant={showPassword ? "outline-danger" : "outline-secondary"}
+                    size="sm"
+                    onClick={() => {
+                        // Al ocultar, limpiamos visualmente (opcional, tu hook ya maneja el envío)
+                        setShowPassword(!showPassword);
+                    }}
+                  >
+                    {showPassword ? "Cancelar cambio" : "Cambiar Contraseña"}
+                  </Button>
+                </div>
+
+                {/* 3. RENDERIZADO CONDICIONAL: 
+                    Si showPassword es false, estos inputs NO EXISTEN en el HTML.
+                    Firefox no puede llenarlos. */}
+                {showPassword && (
+                  <div className="bg-light p-3 rounded mb-3">
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group className="mb-3" controlId="formNewPassword">
+                          <Form.Label>Nueva Contraseña</Form.Label>
+                          <Form.Control
+                            type="password"
+                            placeholder="Nueva contraseña"
+                            name="newPassword"
+                            value={formData.newPassword}
+                            onChange={handleChange}
+                            isInvalid={!!errors.newPassword}
+                            autoComplete="new-password"
+                          />
+                          <Form.Control.Feedback type="invalid">{errors.newPassword}</Form.Control.Feedback>
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group className="mb-3" controlId="formConfirmPassword">
+                          <Form.Label>Confirmar Contraseña</Form.Label>
+                          <Form.Control
+                            type="password"
+                            placeholder="Repetir contraseña"
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            isInvalid={!!errors.confirmPassword}
+                            autoComplete="new-password"
+                          />
+                          <Form.Control.Feedback type="invalid">{errors.confirmPassword}</Form.Control.Feedback>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+              </div>
                 
                 {/* --- Botón de Guardar y Mensajes --- */}
                 <div className="d-grid">

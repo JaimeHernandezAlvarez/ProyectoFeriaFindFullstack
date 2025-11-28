@@ -2,7 +2,6 @@
 
 /**
  * Interfaz para un solo Producto de la feria.
- * Reemplaza a 'robotsProps'.
  */
 export interface ProductoProps {
   id: number;
@@ -19,21 +18,19 @@ export interface ProductoProps {
 
 /**
  * Interfaz para la respuesta de la API al obtener TODOS los productos.
- * Reemplaza a 'robotsAllProps'.
  */
 export interface RespuestaTodosProductos {
   ok: boolean;
   statusCode: number;
-  productos: ProductoProps[]; // Cambiado de 'robots'
+  productos: ProductoProps[];
 }
 
 /**
  * Interfaz para la respuesta de la API al obtener UN SOLO producto
  * (ya sea por ID o por nombre).
- * Reemplaza a 'robotNameProps' y 'robotIdProps'.
  */
 export interface RespuestaProductoUnico {
   ok: boolean;
   statusCode: number;
-  producto: ProductoProps; // Cambiado de 'robot' o 'robotABuscar'
+  producto: ProductoProps; 
 }

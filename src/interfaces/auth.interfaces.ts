@@ -53,3 +53,20 @@ export interface ProfileErrors {
   confirmPassword?: string;
   general?: string; // Para mensajes de éxito o error
 }
+
+export interface UsuarioAPI {
+  idUsuario?: number;         // El ID numérico (autogenerado)
+  nombreUsuario: string;      // 👈 CORREGIDO: Antes era 'nombre'
+  correoElectronico: string;  // El email
+  contrasena?: string;        // A veces los backends devuelven el hash, útil para el update
+  foto?: string;              // URL de la foto de perfil
+  descripcion?: string;       // "Vendedor de tomates..."
+  horario?: string;           // "Lun-Vie 9-18hrs"
+  rol?: string;               // Por si acaso el backend devuelve el rol
+}
+
+export interface AuthResponse {
+  ok: boolean;        // ¿Fue exitoso?
+  message?: string;   // Mensaje de error si falló
+  usuario?: UsuarioAPI; // Los datos del usuario si fue exitoso
+}

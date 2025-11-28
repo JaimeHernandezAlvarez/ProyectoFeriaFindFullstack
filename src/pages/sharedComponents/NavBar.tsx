@@ -62,6 +62,10 @@ export const NavBar = ({ onQuery }:Props) => {
               <i className="fa-solid fa-house me-1"></i>
               Inicio
             </Nav.Link>
+            <Nav.Link as={Link} to="/vendedores" active className="text-white">
+              <i className="fa-solid fa-address-card me-1"></i>
+              Vendedores
+            </Nav.Link>
             <Nav.Link as={Link} to="/mapa" className="text-white">
               <i className="fa-solid fa-map-location-dot me-1"></i>
               Mapa
