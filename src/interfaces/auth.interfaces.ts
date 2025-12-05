@@ -63,10 +63,12 @@ export interface UsuarioAPI {
   descripcion?: string;       // "Vendedor de tomates..."
   horario?: string;           // "Lun-Vie 9-18hrs"
   rol?: string;               // Por si acaso el backend devuelve el rol
+  token?: string;
 }
 
 export interface AuthResponse {
   ok: boolean;        // ¿Fue exitoso?
   message?: string;   // Mensaje de error si falló
   usuario?: UsuarioAPI; // Los datos del usuario si fue exitoso
+  token?: string;
 }

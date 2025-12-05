@@ -1,29 +1,44 @@
-import type { LoginFormData, RegisterFormData, AuthResponse } from '../interfaces/auth.interfaces';
-import type { ProfileFormData } from '../interfaces/auth.interfaces';
+import type { LoginFormData, RegisterFormData, AuthResponse, ProfileFormData } from '../interfaces/auth.interfaces';
+
 const BASE_URL = 'https://microuser.onrender.com/api/v1';
+
+// 🛠️ UTILIDAD: Función para obtener el token y armar los headers de autorización
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token'); // Recuperamos el token guardado
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}) // Si hay token, lo agregamos
+  };
+};
 
 // --- LOGIN ---
 export const loginUserAction = async (formData: LoginFormData): Promise<AuthResponse> => {
   try {
     const response = await fetch(`${BASE_URL}/usuarios/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }, // Login es público, no lleva token
       body: JSON.stringify({
-        correoElectronico: formData.email, // 👈 Mapeo manual para el backend
+        correoElectronico: formData.email,
         password: formData.password
       })
     });
 
-    // Si la API devuelve 401 (no autorizado) o 404, lanzamos error
     if (!response.ok) {
         throw new Error('Credenciales incorrectas');
     }
 
     const data = await response.json();
+    
+    // 👇 LOGICA JWT: Guardamos el token si viene en la respuesta
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      console.log("🔑 Token guardado correctamente");
+    }
 
     return {
       ok: true,
-      usuario: data // Asumimos que la API devuelve el objeto usuario directamente o dentro de data
+      usuario: data, // Si 'data' contiene info del usuario + token
+      token: data.token
     };
 
   } catch (error) {
@@ -33,18 +48,12 @@ export const loginUserAction = async (formData: LoginFormData): Promise<AuthResp
 };
 
 // --- REGISTRO ---
-// --- REGISTRO ---
-// --- REGISTRO ---
 export const registerUserAction = async (formData: RegisterFormData): Promise<AuthResponse> => {
   try {
-    // 1. Preparamos el payload EXACTO según tu Swagger
     const payload = {
-      // Frontend (formData)  ->  Backend (Swagger)
-      nombreUsuario:      formData.nombre,           // nombre -> nombreUsuario
-      correoElectronico:  formData.email,            // email -> correoElectronico
-      contrasena:         formData.password,         // password -> contrasena
-      
-      // Datos obligatorios que el formulario no pide (Enviamos valores por defecto)
+      nombreUsuario:      formData.nombre,
+      correoElectronico:  formData.email,
+      contrasena:         formData.password,
       foto:               "https://cdn-icons-png.flaticon.com/512/149/149071.png",
       descripcion:        "Nuevo usuario registrado desde la web",
       horario:            "Disponible"
@@ -54,22 +63,27 @@ export const registerUserAction = async (formData: RegisterFormData): Promise<Au
 
     const response = await fetch(`${BASE_URL}/usuarios`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }, // Registro es público
       body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ Error del Backend:", response.status, errorText);
       throw new Error(`Error ${response.status}: No se pudo registrar.`);
     }
 
     const data = await response.json();
-    console.log("✅ Registro exitoso:", data);
+    
+    // 👇 LOGICA JWT: Al registrarse, usualmente el backend loguea automáticamente
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      console.log("🔑 Token guardado tras registro");
+    }
     
     return { 
         ok: true, 
-        usuario: data 
+        usuario: data,
+        token: data.token
     };
 
   } catch (error: any) {
@@ -80,26 +94,24 @@ export const registerUserAction = async (formData: RegisterFormData): Promise<Au
     };
   }
 };
+
 // --- 3. OBTENER USUARIO POR EMAIL ---
-// src/actions/auth.actions.ts
 export const getUserByEmailAction = async (email: string): Promise<AuthResponse> => {
     try {
         console.log(`🔎 Buscando usuario por QueryParam: ${email}`);
 
-        // CORRECCIÓN FINAL: Cambiamos 'correoElectronico' por 'email'
-        const response = await fetch(`${BASE_URL}/usuarios/buscar?email=${encodeURIComponent(email)}`);
+        // 👇 CAMBIO CLAVE: Agregamos el segundo parámetro con los headers
+        const response = await fetch(`${BASE_URL}/usuarios/buscar?email=${encodeURIComponent(email)}`, {
+            method: 'GET',           // Es buena práctica explicitar el método
+            headers: getAuthHeaders() // <--- ¡AQUÍ ESTÁ LA SOLUCIÓN! Enviamos el token.
+        });
         
         if (!response.ok) {
             console.error(`Error HTTP: ${response.status}`);
-            return { ok: false, message: 'Usuario no encontrado' };
+            return { ok: false, message: 'Usuario no encontrado o sesión expirada' };
         }
         
         const data = await response.json();
-        console.log("📦 Usuario recibido:", data);
-
-        // Como tu backend devuelve 'EntityModel', los datos del usuario suelen venir
-        // en la raíz del objeto JSON (junto con "_links"). 
-        // Así que devolvemos 'data' directamente.
         return { ok: true, usuario: data };
 
     } catch (error) {
@@ -109,11 +121,9 @@ export const getUserByEmailAction = async (email: string): Promise<AuthResponse>
 };
 
 // --- 4. ACTUALIZAR USUARIO (PUT) ---
-// En src/actions/auth.actions.ts
-
+// 🔒 ESTA RUTA DEBERÍA ESTAR PROTEGIDA
 export const updateUserAction = async (id: number, formData: ProfileFormData): Promise<AuthResponse> => {
     try {
-        // 1. Payload base SIN la propiedad contrasena
         const payload: any = {
             idUsuario: id,
             nombreUsuario: formData.nombre,
@@ -123,22 +133,25 @@ export const updateUserAction = async (id: number, formData: ProfileFormData): P
             foto: formData.foto
         };
 
-        // 2. Solo agregamos la propiedad SI Y SOLO SI hay texto real
-        // Como ahora los inputs están ocultos, formData.newPassword estará vacío ("")
         if (formData.newPassword && formData.newPassword.trim().length > 0) {
             payload.contrasena = formData.newPassword;
         } 
-        
-        // DEBUG: Mira la consola. Si actualizas el nombre, NO debe aparecer 'contrasena' aquí.
-        console.log("📤 Payload a enviar:", payload);
 
+        // 👇 CAMBIO IMPORTANTE: Usamos los headers con Token
         const response = await fetch(`${BASE_URL}/usuarios/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(), // <--- Aquí inyectamos el JWT
             body: JSON.stringify(payload)
         });
         
+        // Manejo especial para token expirado (401 o 403)
+        if (response.status === 401 || response.status === 403) {
+             // Opcional: podrías forzar logout aquí
+             throw new Error("Sesión expirada o no autorizada");
+        }
+
         if (!response.ok) throw new Error(`Error ${response.status}`);
+        
         const data = await response.json();
         return { ok: true, usuario: data };
 

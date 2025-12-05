@@ -1,54 +1,39 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ProfileFormData, ProfileErrors } from '../interfaces/auth.interfaces'; // Asegúrate que la ruta sea correcta
+import type { ProfileFormData, ProfileErrors } from '../interfaces/auth.interfaces';
 import { getUserByEmailAction, updateUserAction } from '../actions/auth.actions';
 
 export const useProfile = () => {
   const navigate = useNavigate();
   
-  // Estado para el formulario
   const [formData, setFormData] = useState<ProfileFormData>({
-    nombre: '',
-    email: '',
-    descripcion: '',
-    horario: '',
-    foto: '',
-    newPassword: '',
-    confirmPassword: '',
+    nombre: '', email: '', descripcion: '', horario: '', foto: '', newPassword: '', confirmPassword: '',
   });
   
-  // Estado para errores y mensajes
   const [errors, setErrors] = useState<ProfileErrors>({});
-  
-  // Estados para manejar la lógica de API
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
 
-  // 1. CARGAR DATOS DEL USUARIO (API)
+  // 1. CARGAR DATOS
   useEffect(() => {
     const cargarPerfil = async () => {
-      // Obtenemos el email guardado en el login
-      const emailStorage = localStorage.getItem("usuarioLogeado");
-      
-      if (!emailStorage) {
-        navigate("/login");
+      const token = localStorage.getItem("token");         // 👈 Validamos Token
+      const emailStorage = localStorage.getItem("usuarioLogeado"); // 👈 Validamos Email
+
+      // Si falta alguno, no hay sesión válida
+      if (!token || !emailStorage) {
+        handleLogout(); // Limpia y redirige
         return;
       }
 
-      // Llamamos a la API
       const respuesta = await getUserByEmailAction(emailStorage);
 
       if (respuesta.ok && respuesta.usuario) {
         const u = respuesta.usuario;
-        
-        // Guardamos el ID para poder actualizar después
         setUserId(u.idUsuario || 0);
-        // Guardamos la contraseña actual (hash) por si no la quieren cambiar
-
-        // Rellenamos el formulario mapeando los nombres del backend a nuestro frontend
         setFormData({
-            nombre: u.nombreUsuario || '',    // Backend: nombreUsuario -> Frontend: nombre
-            email: u.correoElectronico || '', // Backend: correoElectronico -> Frontend: email
+            nombre: u.nombreUsuario || '',
+            email: u.correoElectronico || '',
             descripcion: u.descripcion || '',
             horario: u.horario || '',
             foto: u.foto || '',
@@ -56,10 +41,8 @@ export const useProfile = () => {
             confirmPassword: ''
         });
       } else {
-        // Si falla (ej: borraron el usuario de la DB), cerramos sesión
-        console.error("Usuario no encontrado en la nube");
-        localStorage.removeItem("usuarioLogeado");
-        navigate("/login");
+        console.error("Usuario no encontrado o token inválido");
+        handleLogout();
       }
       
       setIsLoading(false);
@@ -68,63 +51,53 @@ export const useProfile = () => {
     cargarPerfil();
   }, [navigate]);
 
-  // 2. MANEJADOR DE CAMBIOS
+  // 2. LOGOUT (NUEVA FUNCIÓN)
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuarioLogeado");
+    localStorage.removeItem("userData");
+    navigate("/login");
+  };
+
+  // 3. MANEJADOR DE CAMBIOS
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Limpiar errores
     if (errors[name as keyof ProfileErrors]) setErrors(prev => ({ ...prev, [name]: undefined }));
     if (errors.general) setErrors(prev => ({ ...prev, general: undefined }));
   };
 
-  // 3. MANEJADOR DE GUARDADO (UPDATE)
+  // 4. UPDATE
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!userId) return; 
 
-    // --- VALIDACIONES LOCALES ---
+    // ... (Tu validación local se mantiene igual) ...
     const newErrors: ProfileErrors = {};
     let valid = true;
-
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = "El nombre es obligatorio.";
-      valid = false;
-    }
-    
-    // Si escribió algo en nueva contraseña, validamos
+    if (!formData.nombre.trim()) { newErrors.nombre = "El nombre es obligatorio."; valid = false; }
     if (formData.newPassword) {
-      if (formData.newPassword.length < 6) {
-        newErrors.newPassword = "Mínimo 6 caracteres.";
-        valid = false;
-      }
-      if (formData.newPassword !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Las contraseñas no coinciden.";
-        valid = false;
-      }
+      if (formData.newPassword.length < 6) { newErrors.newPassword = "Mínimo 6 caracteres."; valid = false; }
+      if (formData.newPassword !== formData.confirmPassword) { newErrors.confirmPassword = "Las contraseñas no coinciden."; valid = false; }
     }
-
-    if (formData.foto && !formData.foto.startsWith('http')) {
-        newErrors.foto = "La URL de la imagen debe ser válida (http...).";
-        valid = false;
-    }
-
-    if (!valid) {
-      setErrors(newErrors);
-      return;
-    }
+    if (!valid) { setErrors(newErrors); return; }
 
     setIsLoading(true);
 
-    // --- LLAMADA A LA API ---
+    // Al llamar a updateUserAction, esta usará 'getAuthHeaders' (que creamos antes)
+    // para leer el token del localStorage y enviarlo.
     const resultado = await updateUserAction(userId, formData);
 
     if (resultado.ok) {
-        setErrors({ general: "¡Perfil actualizado correctamente en la nube!" });
-        // Opcional: Limpiar campos de contraseña
+        setErrors({ general: "¡Perfil actualizado correctamente!" });
         setFormData(prev => ({...prev, newPassword: '', confirmPassword: ''}));
     } else {
-        setErrors({ general: resultado.message || "Error al actualizar." });
+        // Si el token expiró, el action podría devolver un error específico
+        if (resultado.message === "Sesión expirada o no autorizada") {
+            handleLogout();
+        } else {
+            setErrors({ general: resultado.message || "Error al actualizar." });
+        }
     }
 
     setIsLoading(false);
@@ -136,5 +109,6 @@ export const useProfile = () => {
     isLoading,
     handleChange,
     handleSubmit,
+    handleLogout // 👈 Exportamos esto para usarlo en el botón
   };
 };

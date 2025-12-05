@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { LoginFormData, LoginErrors } from '../interfaces/auth.interfaces';
-import { loginUserAction } from '../actions/auth.actions'; // 👈 IMPORTAR ACCIÓN
+import { loginUserAction } from '../actions/auth.actions';
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<LoginFormData>({ email: '', password: '' });
   const [errors, setErrors] = useState<LoginErrors>({});
-  const [loading, setLoading] = useState(false); // 👈 NUEVO ESTADO
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -18,7 +18,6 @@ export const useLoginForm = () => {
   };
 
   const validateForm = (): boolean => {
-     // ... (Tu validación existente se mantiene igual) ...
      const { email, password } = formData;
      if (!email.trim()) return false;
      if (!password.trim()) return false;
@@ -29,17 +28,17 @@ export const useLoginForm = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    setLoading(true); // Bloqueamos botón
+    setLoading(true);
 
-    // --- NUEVA LÓGICA CON API ---
     const response = await loginUserAction(formData);
 
-    if (response.ok && response.usuario) {
-      // 1. Guardamos el email o token en localStorage para mantener sesión
-      localStorage.setItem("usuarioLogeado", response.usuario.correoElectronico);
-      // Opcional: Guardar más datos del usuario si quieres
-      localStorage.setItem("userData", JSON.stringify(response.usuario));
+    // 👇 AQUÍ ESTÁ EL CAMBIO IMPORTANTE
+    if (response.ok) {
+      // Como el backend solo devuelve el token, guardamos el email 
+      // DIRECTAMENTE DEL FORMULARIO (formData.email)
+      localStorage.setItem("usuarioLogeado", formData.email); 
       
+      console.log("✅ Login exitoso. Usuario guardado:", formData.email);
       navigate("/");
     } else {
       setErrors({ email: response.message || "Error al iniciar sesión" });
