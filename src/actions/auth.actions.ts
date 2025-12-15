@@ -10,13 +10,38 @@ const getAuthHeaders = () => {
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}) // Si hay token, lo agregamos
   };
 };
+// --- 3. OBTENER USUARIO POR EMAIL ---
+export const getUserByEmailAction = async (email: string): Promise<AuthResponse> => {
+    try {
+        console.log(`🔎 Buscando usuario por QueryParam: ${email}`);
+
+        // 👇 CAMBIO CLAVE: Agregamos el segundo parámetro con los headers
+        const response = await fetch(`${BASE_URL}/usuarios/buscar?email=${encodeURIComponent(email)}`, {
+            method: 'GET',           // Es buena práctica explicitar el método
+            headers: getAuthHeaders() // <--- ¡AQUÍ ESTÁ LA SOLUCIÓN! Enviamos el token.
+        });
+        
+        if (!response.ok) {
+            console.error(`Error HTTP: ${response.status}`);
+            return { ok: false, message: 'Usuario no encontrado o sesión expirada' };
+        }
+        
+        const data = await response.json();
+        return { ok: true, usuario: data };
+
+    } catch (error) {
+        console.error("❌ Error:", error);
+        return { ok: false, message: 'Error de conexión' };
+    }
+};
 
 // --- LOGIN ---
 export const loginUserAction = async (formData: LoginFormData): Promise<AuthResponse> => {
   try {
+    // PASO 1: Obtener el Token
     const response = await fetch(`${BASE_URL}/usuarios/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }, // Login es público, no lleva token
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         correoElectronico: formData.email,
         password: formData.password
@@ -27,19 +52,41 @@ export const loginUserAction = async (formData: LoginFormData): Promise<AuthResp
         throw new Error('Credenciales incorrectas');
     }
 
-    const data = await response.json();
+    const loginData = await response.json();
     
-    // 👇 LOGICA JWT: Guardamos el token si viene en la respuesta
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      console.log("🔑 Token guardado correctamente");
+    // Si no hay token, fallamos
+    if (!loginData.token) {
+        throw new Error('El servidor no devolvió un token');
     }
 
-    return {
-      ok: true,
-      usuario: data, // Si 'data' contiene info del usuario + token
-      token: data.token
-    };
+    // PASO 2: Guardar Token INMEDIATAMENTE
+    // Esto es CRUCIAL para que 'getUserByEmailAction' funcione en la siguiente línea
+    localStorage.setItem('token', loginData.token);
+    
+    // PASO 3: Obtener los datos del usuario usando el email del formulario
+    // Como ya guardamos el token arriba, esta función lo tomará de los headers
+    const userResponse = await getUserByEmailAction(formData.email);
+
+    if (userResponse.ok && userResponse.usuario) {
+        // PASO 4: Guardar al usuario completo en localStorage
+        // Limpiamos datos sensibles antes de guardar
+        const {contrasena, ...userSafe } = userResponse.usuario;
+        
+        // Estandarizamos: siempre guardamos bajo la llave "user" para que AdminRoute lo encuentre
+        localStorage.setItem('user', JSON.stringify(userSafe));
+        
+        console.log("✅ Login Completo. Usuario:", userSafe);
+
+        return {
+            ok: true,
+            token: loginData.token,
+            usuario: userSafe // Devolvemos el usuario completo a la UI
+        };
+    } else {
+        // Caso raro: Login ok, pero falló buscar los detalles
+        console.warn("Login token ok, pero falló obtener detalles usuario");
+        return { ok: true, token: loginData.token }; 
+    }
 
   } catch (error) {
     console.error("Error en Login:", error);
@@ -77,6 +124,7 @@ export const registerUserAction = async (formData: RegisterFormData): Promise<Au
     // 👇 LOGICA JWT: Al registrarse, usualmente el backend loguea automáticamente
     if (data.token) {
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
       console.log("🔑 Token guardado tras registro");
     }
     
@@ -93,31 +141,6 @@ export const registerUserAction = async (formData: RegisterFormData): Promise<Au
         message: 'Error al intentar registrarse.' 
     };
   }
-};
-
-// --- 3. OBTENER USUARIO POR EMAIL ---
-export const getUserByEmailAction = async (email: string): Promise<AuthResponse> => {
-    try {
-        console.log(`🔎 Buscando usuario por QueryParam: ${email}`);
-
-        // 👇 CAMBIO CLAVE: Agregamos el segundo parámetro con los headers
-        const response = await fetch(`${BASE_URL}/usuarios/buscar?email=${encodeURIComponent(email)}`, {
-            method: 'GET',           // Es buena práctica explicitar el método
-            headers: getAuthHeaders() // <--- ¡AQUÍ ESTÁ LA SOLUCIÓN! Enviamos el token.
-        });
-        
-        if (!response.ok) {
-            console.error(`Error HTTP: ${response.status}`);
-            return { ok: false, message: 'Usuario no encontrado o sesión expirada' };
-        }
-        
-        const data = await response.json();
-        return { ok: true, usuario: data };
-
-    } catch (error) {
-        console.error("❌ Error:", error);
-        return { ok: false, message: 'Error de conexión' };
-    }
 };
 
 // --- 4. ACTUALIZAR USUARIO (PUT) ---

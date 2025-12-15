@@ -1,7 +1,7 @@
 import { useEffect, useState , type KeyboardEvent } from 'react';
 import { Navbar, Nav, NavDropdown, Container, Form, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../../context/CartContext'; // 👈 NUEVO
+import { useCart } from '../../context/CartContext';
 
 interface Props {
   onQuery: (query:string) => void; 
@@ -9,8 +9,19 @@ interface Props {
 
 export const NavBar = ({ onQuery }:Props) => {
   const navigate = useNavigate();
-  const { totalItems } = useCart(); // 👈 NUEVO
+  const { totalItems } = useCart();
   const [ query , setQuery ] = useState('');
+
+  // --- 1. LEER DATOS DEL USUARIO ---
+  // Leemos el usuario que guardamos en auth.actions.ts
+  const userRaw = localStorage.getItem("user");
+  const user = userRaw ? JSON.parse(userRaw) : null;
+
+  // Verificamos si existe token (para saber si está logueado)
+  const isLoggedIn = !!localStorage.getItem("token");
+
+  // 👇 Verificamos si es ADMIN (usando la propiedad 'rol' de tu backend)
+  const isAdmin = user?.rol === "ADMIN"; 
 
   // --- Lógica de búsqueda ---
   useEffect(()=> {
@@ -33,12 +44,11 @@ export const NavBar = ({ onQuery }:Props) => {
       handleSearch();
     }
   };
-  // --- Fin de la lógica de búsqueda ---
-
-  const isLoggedIn = !!localStorage.getItem("usuarioLogeado");
 
   const handleLogout = () => {
-    localStorage.removeItem("usuarioLogeado");
+    // 👇 Limpiamos todo para evitar errores
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/");
   };
 
@@ -62,7 +72,9 @@ export const NavBar = ({ onQuery }:Props) => {
               <i className="fa-solid fa-house me-1"></i>
               Inicio
             </Nav.Link>
-            <Nav.Link as={Link} to="/vendedores" active className="text-white">
+            
+            {/* ... Resto de tus links de navegación ... */}
+             <Nav.Link as={Link} to="/vendedores" active className="text-white">
               <i className="fa-solid fa-address-card me-1"></i>
               Vendedores
             </Nav.Link>
@@ -91,6 +103,16 @@ export const NavBar = ({ onQuery }:Props) => {
                 Otros
               </NavDropdown.Item>
             </NavDropdown>
+
+            {/* 👇 BOTÓN SOLO PARA ADMIN (OPCIÓN EN EL NAV) 
+                Si prefieres que esté arriba en el menú principal: */}
+            {isAdmin && (
+               <Nav.Link as={Link} to="/admin" className="text-warning fw-bold">
+                  <i className="fa-solid fa-crown me-1"></i>
+                  Panel Admin
+               </Nav.Link>
+            )}
+
           </Nav>
           
           <Form className="d-flex align-items-center">
@@ -106,7 +128,6 @@ export const NavBar = ({ onQuery }:Props) => {
               onKeyDown={handleKeyDown}
             />
 
-            {/* 🛒 Botón Carrito */}
             <Button
               variant="outline-light"
               className="me-2 position-relative text-nowrap"
@@ -125,6 +146,18 @@ export const NavBar = ({ onQuery }:Props) => {
             
             { isLoggedIn ? (
               <>
+                {/* 👇 BOTÓN SOLO PARA ADMIN (OPCIÓN BOTÓN DESTACADO) */}
+                {isAdmin && (
+                    <Button 
+                      variant="danger" // Color rojo/distintivo para admin
+                      className="me-2 text-nowrap"
+                      onClick={() => navigate('/admin')}
+                    >
+                      <i className="fa-solid fa-user-shield me-1"></i>
+                      Admin
+                    </Button>
+                )}
+
                 <Button 
                   onClick={() => navigate('/perfil')}
                   variant="outline-light"
